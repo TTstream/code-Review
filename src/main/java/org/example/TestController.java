@@ -8,6 +8,6 @@ public class TestController {
 
     @GetMapping("/")
     public String home() {
-        return "server ok";
+        return "server ok~";
     }
 }
