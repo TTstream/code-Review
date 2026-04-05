@@ -27,7 +27,7 @@ public class GithubWebhookController {
         // 1. GitHub에서 보내준 Webhook Payload(JSON)를 받습니다.
         // Postman에서 Body를 아예 비워서 보내거나 JSON 형식이 안 맞으면 payload가 null이 될 수 있습니다.
 
-        System.out.println("Full Payload: " + payload);
+        System.out.println("Full Payload~: " + payload);
 
         if (payload == null || payload.isEmpty()) {
             System.out.println("Received Empty Payload");
