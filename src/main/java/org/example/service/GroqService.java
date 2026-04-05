@@ -28,7 +28,7 @@ public class GroqService {
     public Mono<String> generateCodeReview(String prompt) {
         // ✅ 모델명을 정확하게 "llama-3.3-70b-versatile" 로 입력합니다.
         GroqRequest request = new GroqRequest("llama-3.3-70b-versatile", List.of(
-                new GroqMessage("system", "You are an expert code reviewer. Please review the following code changes."),
+                new GroqMessage("system", "You are an expert senior software engineer. Please review the following code changes. 설명과 피드백은 반드시 자연스러운 한국어로 작성해 주세요."),
                 new GroqMessage("user", prompt)
         ));
 

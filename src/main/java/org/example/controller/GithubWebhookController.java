@@ -87,6 +87,7 @@ public class GithubWebhookController {
                                     System.out.println("[8] Posting comment to GitHub PR...");
                                     return githubService.postCommentToPr(repoFullName, prNumber, review)
                                             .thenReturn("AI Review Comment successfully posted! Check your GitHub PR.");
+
                                 });
                     })
                     .onErrorResume(error -> {
@@ -94,7 +95,7 @@ public class GithubWebhookController {
                         return Mono.just("Error occurred: " + error.getMessage());
                     });
         }
-
+        System.out.println("PR 리뷰 코멘트 작성 완료!");
         return Mono.just("Webhook received. (Action: " + action + ")");
     }
 }
