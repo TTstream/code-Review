@@ -26,7 +26,8 @@ public class GroqService {
     }
 
     public Mono<String> generateCodeReview(String prompt) {
-        GroqRequest request = new GroqRequest("llama3-8b-8192", List.of(
+        // ✅ 모델명을 정확하게 "llama-3.3-70b-versatile" 로 입력합니다.
+        GroqRequest request = new GroqRequest("llama-3.3-70b-versatile", List.of(
                 new GroqMessage("system", "You are an expert code reviewer. Please review the following code changes."),
                 new GroqMessage("user", prompt)
         ));
@@ -34,7 +35,7 @@ public class GroqService {
         return this.webClient.post()
                 .uri("/chat/completions")
                 .header("Authorization", "Bearer " + apiKey)
-                .contentType(MediaType.APPLICATION_JSON) // ✅ 필수: JSON 형식임을 명시
+                .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(request)
                 .retrieve()
                 .bodyToMono(GroqResponse.class)
@@ -45,7 +46,6 @@ public class GroqService {
                     return "No response from Groq API.";
                 })
                 .onErrorResume(WebClientResponseException.class, ex -> {
-                    // ✅ 400 에러 발생 시 Groq가 뱉어내는 상세 에러 메시지를 출력합니다.
                     System.err.println("Groq API Error Status: " + ex.getStatusCode());
                     System.err.println("Groq API Error Body: " + ex.getResponseBodyAsString());
                     return Mono.error(ex);
