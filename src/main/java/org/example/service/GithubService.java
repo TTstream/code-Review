@@ -26,10 +26,14 @@ public class GithubService {
     public Mono<String> getPrDiff(String diffUrl) {
         return webClient.get()
                 .uri(diffUrl)
-                // Private 저장소이거나 Rate Limit 방지를 위해 토큰을 헤더에 담아줍니다.
-                .header("Authorization", "Bearer " + githubToken)
+                // Private/Public 모두 diff를 가져오기 위해서는 토큰과 헤더 설정이 필요할 수 있습니다.
+                // 단, 순수 .diff URL (웹) 접근 시 토큰 인증 방식에 따라 404/401이 발생할 수 있으므로
+                // GitHub API 형식의 Accept 헤더를 지정합니다.
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + githubToken)
+                .header(HttpHeaders.ACCEPT, "application/vnd.github.v3.diff")
                 .retrieve()
-                .bodyToMono(String.class);
+                .bodyToMono(String.class)
+                .doOnError(e -> System.err.println("[GithubService] Failed to get diff from " + diffUrl + ": " + e.getMessage()));
     }
 
     // 2. AI의 리뷰 결과를 GitHub PR에 코멘트로 달아주는 메서드
@@ -43,10 +47,12 @@ public class GithubService {
 
         return webClient.post()
                 .uri(issueCommentUrl)
-                .header("Authorization", "Bearer " + githubToken)
-                .header("Accept", "application/vnd.github.v3+json") // GitHub REST API 권장 헤더
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + githubToken)
+                .header(HttpHeaders.ACCEPT, "application/vnd.github.v3+json") // GitHub REST API 권장 헤더
+                .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(requestBody)
                 .retrieve()
-                .bodyToMono(Void.class);
+                .bodyToMono(Void.class)
+                .doOnError(e -> System.err.println("[GithubService] Failed to post comment to " + issueCommentUrl + ": " + e.getMessage()));
     }
 }

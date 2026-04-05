@@ -24,7 +24,6 @@ public class GithubWebhookController {
 
     @PostMapping("/github")
     public Mono<String> handleGithubWebhook(@RequestBody(required = false) Map<String, Object> payload) {
-        // 1. GitHub에서 보내준 Webhook Payload(JSON)를 받습니다.
         System.out.println("=================================================");
         System.out.println("[1] Received GitHub Webhook Payload: " + payload);
 
@@ -37,7 +36,7 @@ public class GithubWebhookController {
         System.out.println("[2] GitHub Webhook Action: " + action);
 
         // PR이 열렸을 때 (action이 "opened"인 경우)
-        if ("opened".equals(action)) {
+        if ("opened".equals(action) || "synchronize".equals(action)) { // 커밋이 추가되었을 때도 동작하게 synchronize 추가
             @SuppressWarnings("unchecked")
             Map<String, Object> pullRequest = (Map<String, Object>) payload.get("pull_request");
             
@@ -45,9 +44,11 @@ public class GithubWebhookController {
                 return Mono.just("Ignored. Not a pull request event.");
             }
 
-            // diff 내용을 받을 수 있는 URL
-            String diffUrl = (String) pullRequest.get("diff_url");
-            System.out.println("[3] Extracted Diff URL: " + diffUrl);
+            // diff_url은 일반 웹페이지용 .diff 일 수 있어 인증문제가 발생할 수 있습니다.
+            // 대신 GitHub API의 diff 엔드포인트를 사용하도록 변경합니다.
+            // URL 예시: https://api.github.com/repos/owner/repo/pulls/1
+            String apiUrl = (String) pullRequest.get("url"); 
+            System.out.println("[3] PR API URL: " + apiUrl);
             
             @SuppressWarnings("unchecked")
             Map<String, Object> head = (Map<String, Object>) pullRequest.get("head");
@@ -63,7 +64,8 @@ public class GithubWebhookController {
             System.out.println("[4] Target Repo: " + repoFullName + ", PR Number: " + prNumber);
 
             // 2. GitHub API를 호출하여 변경된 파일의 코드(diff)를 가져옵니다.
-            return githubService.getPrDiff(diffUrl)
+            System.out.println(">>> Requesting Diff from: " + apiUrl);
+            return githubService.getPrDiff(apiUrl)
                     .flatMap(diffCode -> {
                         System.out.println("\n[5] === Extracted Diff Code from GitHub ===");
                         System.out.println(diffCode);
@@ -75,7 +77,6 @@ public class GithubWebhookController {
 
                         String prompt = "You are an expert code reviewer. Please review the following code changes (diff format):\n\n" + diffCode;
 
-                        // 3. GroqService를 호출하여 AI 리뷰 결과를 받습니다.
                         System.out.println("[6] Requesting AI Review to Groq API...");
                         return groqService.generateCodeReview(prompt)
                                 .flatMap(review -> {
@@ -83,16 +84,13 @@ public class GithubWebhookController {
                                     System.out.println(review);
                                     System.out.println("======================================\n");
 
-                                    // 4. 리뷰 결과를 다시 GitHub PR 코멘트로 등록합니다.
                                     System.out.println("[8] Posting comment to GitHub PR...");
                                     return githubService.postCommentToPr(repoFullName, prNumber, review)
                                             .thenReturn("AI Review Comment successfully posted! Check your GitHub PR.");
                                 });
                     })
                     .onErrorResume(error -> {
-                        // 에러 발생 시 로그 출력 및 응답
                         System.err.println("[Error] Failed during processing: " + error.getMessage());
-                        error.printStackTrace();
                         return Mono.just("Error occurred: " + error.getMessage());
                     });
         }
