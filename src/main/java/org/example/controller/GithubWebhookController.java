@@ -23,8 +23,14 @@ public class GithubWebhookController {
     }
 
     @PostMapping("/github")
-    public Mono<String> handleGithubWebhook(@RequestBody Map<String, Object> payload) {
+    public Mono<String> handleGithubWebhook(@RequestBody(required = false) Map<String, Object> payload) {
         // 1. GitHub에서 보내준 Webhook Payload(JSON)를 받습니다.
+        // Postman에서 Body를 아예 비워서 보내거나 JSON 형식이 안 맞으면 payload가 null이 될 수 있습니다.
+        if (payload == null || payload.isEmpty()) {
+            System.out.println("Received Empty Payload");
+            return Mono.just("Received empty payload. Please send valid JSON.");
+        }
+
         String action = (String) payload.get("action");
         System.out.println("Received GitHub Webhook Action: " + action);
 
@@ -44,6 +50,10 @@ public class GithubWebhookController {
             // 코멘트를 달기 위한 저장소 정보 및 PR 번호
             @SuppressWarnings("unchecked")
             Map<String, Object> head = (Map<String, Object>) pullRequest.get("head");
+            if (head == null || head.get("repo") == null) {
+                 return Mono.just("Ignored. Missing repo info in payload.");
+            }
+
             @SuppressWarnings("unchecked")
             Map<String, Object> repo = (Map<String, Object>) head.get("repo");
             String repoFullName = (String) repo.get("full_name"); // "user/repository" 형식
